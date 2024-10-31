@@ -1,2 +1,2 @@
-"PROJECT: Android Test App"
-"Version: 0.0.1"
+"PROJECT: Android Kivy Test"
+"Version: 0.1.1"
