@@ -1,165 +1,271 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import os
 from kivy.lang import Builder
-from kivy.uix.button import Button
-from kivy.uix.image import Image
-from kivy.uix.label import Label
-from kivy.uix.boxlayout import BoxLayout
-from kivymd.app import MDApp
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.textfield import MDTextField
 from kivy.core.window import Window
-import re
+from kivymd.app import MDApp
+from kivymd.uix.navigationdrawer import MDNavigationDrawer
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDRaisedButton, MDFlatButton
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.list import OneLineListItem
+
+Window.size = (450, 800)
 
 KV = '''
-BoxLayout:
+MDBoxLayout:
     orientation: 'vertical'
-    padding: dp(10)
-    spacing: dp(10)
 
-    canvas:
-        Color:
-            rgba: 1, 1, 1, 1  # Cor branca
-        Rectangle:
-            pos: self.pos
-            size: self.size
+    MDTopAppBar:
+        title: "Calculadora"
+        left_action_items: [["menu", lambda x: nav_drawer.set_state("toggle")]]
+        title_align: "left"
+        md_bg_color: 0, 0, 0, 1  # Fundo preto
+        elevation: 4
+        padding: "0dp"
 
-    Label:
-        text: "Calculadora de Gráficos da Função"
-        color: 0, 0, 0, 1  # Texto em preto
-        size_hint_y: None
-        height: self.parent.height * 0.1  # 10% da altura do pai
+    MDNavigationDrawer:
+        id: nav_drawer
+        scrim_color: 0, 0, 0, 0.6
 
-    MDTextField:
-        id: function_input
-        hint_text: "Digite a função (ex: f(x) = 3*x**3 + 3*x + 3)"
-        mode: "outlined"
-        line_color_normal: 0, 0, 1, 1  # Borda azul
-        line_color_focus: 0, 0, 1, 1  # Borda azul quando focado
-        multiline: False
-        size_hint_y: None
-        height: self.parent.height * 0.1  # 10% da altura do pai
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(10)
+            spacing: dp(10)
 
-    Button:
-        text: "Gerar Gráfico"
-        on_release: app.plot_function()
-        size_hint_y: None
-        height: self.parent.height * 0.06  # 8% da altura do pai para deixar mais fino
-        size_hint_x: 1  # Ocupa toda a largura disponível
-        background_color: 0.4, 0.8, 1, 1  # Azul claro
-        color: 1, 1, 1, 1  # Texto em branco
-        pos_hint: {"center_x": 0.5}  # Centraliza horizontalmente
+            MDLabel:
+                text: "Menu"
+                font_style: "H5"
+                size_hint_y: None
+                height: self.texture_size[1]
+                theme_text_color: "Primary"
 
-    Label:
-        id: error_label
-        text: ""  # Inicialmente vazio
-        color: 1, 0, 0, 1  # Texto em vermelho
-        size_hint_y: None
-        height: self.parent.height * 0.1  # 10% da altura do pai
+            OneLineListItem:
+                text: "Gráficos de Funções"
+                on_release: 
+                    nav_drawer.set_state("close")
+                    screen_manager.current = "graph_calculator"
+                theme_text_color: "Primary"
 
-    Image:
-        id: graph_image
-        size_hint_y: None
-        height: self.parent.height * 0.5  # 50% da altura do pai
-        
-    Label:
-        text: "Feito por Felipe Machado - Versão 1.45"
-        color: 0.5, 0.5, 0.5, 1  # Texto em cinza
-        size_hint_y: None
-        height: self.parent.height * 0.05  # 5% da altura do pai
-        halign: "center"
-        valign: "middle"
-        font_size: '10sp'  # Tamanho de fonte pequeno
+            OneLineListItem:
+                text: "Calculadora"
+                on_release: 
+                    nav_drawer.set_state("close")
+                    screen_manager.current = "basic_calculator"
+                theme_text_color: "Primary"
+
+            OneLineListItem:
+                text: "Tema"
+                on_release: 
+                    app.toggle_theme()  
+                    nav_drawer.set_state("close")
+                theme_text_color: "Primary"
+
+            OneLineListItem:
+                text: "Sobre"
+                on_release: 
+                    nav_drawer.set_state("close")
+                    screen_manager.current = "about"
+                theme_text_color: "Primary"
+
+    ScreenManager:
+        id: screen_manager
+
+        Screen:
+            name: "graph_calculator"
+            BoxLayout:
+                orientation: 'vertical'
+                padding: dp(10), dp(20), dp(10), dp(10)
+                spacing: dp(20)
+
+                MDTextField:
+                    id: function_input
+                    hint_text: "Digite a função ex: f(x) = 3x^2 + 2x + 5"
+                    mode: "rectangle"
+                    multiline: False
+                    size_hint_y: None
+                    height: self.parent.height * 0.1
+
+                MDRaisedButton:
+                    text: "Gerar Gráfico"
+                    on_release: app.plot_function()
+                    size_hint_y: None
+                    height: self.parent.height * 0.06
+                    size_hint_x: 1
+
+                MDLabel:
+                    id: error_label
+                    text: ""
+                    theme_text_color: "Error"
+                    size_hint_y: None
+                    height: self.parent.height * 0.1
+
+                Image:
+                    id: graph_image
+                    size_hint_y: 0.6
+                    opacity: 0
+
+                MDLabel:
+                    text: "Versão 1.88"
+                    color: 0.5, 0.5, 0.5, 1
+                    size_hint_y: None
+                    height: self.parent.height * 0.05
+                    halign: "center"
+                    font_size: '10sp'
+
+        Screen:
+            name: "basic_calculator"
+            BoxLayout:
+                orientation: 'vertical'
+                padding: dp(10)
+                spacing: dp(20)
+
+                MDTextField:
+                    id: calculator_display
+                    hint_text: ""
+                    font_size: '24sp'
+                    halign: "right"
+                    size_hint_y: None
+                    height: dp(50)
+
+                GridLayout:
+                    cols: 4  # Com 4 colunas
+                    spacing: dp(10)
+                    padding: dp(10)
+                    size_hint_x: None
+                    width: self.parent.width * 0.82 
+                    pos_hint: {"right": 1} 
+
+                    MDFlatButton:
+                        text: "C"
+                        on_release: app.update_display("C")
+                        theme_text_color: "Error"
+                    MDFlatButton:
+                        text: "()"
+                        on_release: app.update_display("()")
+                    MDFlatButton:
+                        text: "%"
+                        on_release: app.update_display("%")
+                    MDFlatButton:
+                        text: "/"
+                        on_release: app.update_display("/")
+
+                    MDFlatButton:
+                        text: "7"
+                        on_release: app.update_display("7")
+                    MDFlatButton:
+                        text: "8"
+                        on_release: app.update_display("8")
+                    MDFlatButton:
+                        text: "9"
+                        on_release: app.update_display("9")
+                    MDFlatButton:
+                        text: "x"
+                        on_release: app.update_display("*")
+
+                    MDFlatButton:
+                        text: "4"
+                        on_release: app.update_display("4")
+                    MDFlatButton:
+                        text: "5"
+                        on_release: app.update_display("5")
+                    MDFlatButton:
+                        text: "6"
+                        on_release: app.update_display("6")
+                    MDFlatButton:
+                        text: "-"
+                        on_release: app.update_display("-")
+
+                    MDFlatButton:
+                        text: "1"
+                        on_release: app.update_display("1")
+                    MDFlatButton:
+                        text: "2"
+                        on_release: app.update_display("2")
+                    MDFlatButton:
+                        text: "3"
+                        on_release: app.update_display("3")
+                    MDFlatButton:
+                        text: "+"
+                        on_release: app.update_display("+")
+
+                    MDFlatButton:
+                        text: "+/-"
+                        on_release: app.update_display("+/-")
+                    MDFlatButton:
+                        text: "0"
+                        on_release: app.update_display("0")
+                    MDFlatButton:
+                        text: ","
+                        on_release: app.update_display(",")
+                    MDFlatButton:
+                        text: "="
+                        on_release: app.calculate_result()
+
+        Screen:
+            name: "about"
+            BoxLayout:
+                orientation: 'vertical'
+                padding: dp(10)
+                spacing: dp(20)
+
+                MDLabel:
+                    text: "Sobre"
+                    halign: "center"
+                    font_style: "H5"
+                    size_hint_y: None
+                    height: self.parent.height * 0.1
+
+                MDLabel:
+                    text: "Calculadora com Kivy - Feito por Felipe Machado"
+                    halign: "center"
+                    size_hint_y: None
+                    height: self.parent.height * 0.1
 '''
 
 class MainApp(MDApp):
-    dialog = None
+    temp_image_path = "temp_graph.png"
 
     def build(self):
-        self.title = "Calculadora de Gráficos da Função"  # Definindo o título do aplicativo
-        root = Builder.load_string(KV)
-        Window.bind(size=self.on_size)  # Conectar o redimensionamento da janela
-        return root
-
-    def on_size(self, *args):
-        # Atualiza o tamanho do fundo sempre que a janela é redimensionada
-        pass  # Não precisa de ajustes para este exemplo
+        self.title = "Calculadora"
+        self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.primary_hue = "500"
+        self.theme_cls.theme_style = "Dark"
+        Window.bind(on_request_close=self.on_app_close)
+        app_interface = Builder.load_string(KV)
+        
+        app_interface.ids.screen_manager.current = "basic_calculator"
+        
+        app_interface.ids.nav_drawer.set_state("close")
+        
+        return app_interface
 
     def plot_function(self):
-        function_str = self.root.ids.function_input.text
+        pass
 
-        # Verificar se a entrada está vazia
-        if not function_str.strip():
-            self.root.ids.error_label.text = "Digite no campo acima!"
-            return
+    def toggle_theme(self):
+        if self.theme_cls.theme_style == "Dark":
+            self.theme_cls.theme_style = "Light"
+        else:
+            self.theme_cls.theme_style = "Dark"
 
-        # Verificar se a entrada contém apenas caracteres válidos
-        if not re.match(r'^[0-9x\+\-\*\/\.\(\) ]+$', function_str):
-            self.root.ids.error_label.text = "Isso não é uma função, apenas letra(s)!"
-            return
+    def update_display(self, value):
+        current_text = self.root.ids.calculator_display.text
+        if value == "C":
+            self.root.ids.calculator_display.text = ""
+        else:
+            self.root.ids.calculator_display.text = current_text + value
 
-        self.root.ids.error_label.text = ""  # Limpar mensagem de erro
-
-        # Verificar se a entrada começa com 'f(x) = '
-        if function_str.startswith('f(x) = '):
-            function_str = function_str[7:]  # Remover 'f(x) = '
-
-        # Substituir potenciação '^' por '**'
-        function_str = function_str.replace('^', '**')
-
-        # Substituir multiplicação implícita entre números e 'x'
-        function_str = re.sub(r'(?<=[0-9])(?=[x])', '*', function_str)  # Ex: 3x -> 3*x
-        function_str = re.sub(r'(?<=[)])(?=[x])', '*', function_str)  # Ex: (x-1)x -> (x-1)*x
-
-        # Remover espaços em branco
-        function_str = function_str.replace(' ', '')
-
-        x = np.linspace(-10, 10, 400)
+    def calculate_result(self):
         try:
-            # Avaliar a função como uma expressão numérica
-            y = eval(function_str)
-
-            # Verificar se y é um valor numérico
-            if not isinstance(y, (np.ndarray, list)):
-                raise ValueError("A função não retornou um valor válido.")
-
-            # Gerar o gráfico
-            plt.figure(figsize=(8, 4))
-            plt.plot(x, y)
-            plt.title(f'Gráfico de {function_str}')
-            plt.xlabel('x')
-            plt.ylabel('f(x)')
-            plt.grid()
-            plt.axhline(0, color='black', lw=0.5, ls='--')
-            plt.axvline(0, color='black', lw=0.5, ls='--')
-
-            # Salvar o gráfico em um buffer de imagem
-            plt.savefig('graph.png', bbox_inches='tight', pad_inches=0)  # Ajustando para não deixar espaço
-            plt.close()
-
-            # Atualizar a imagem no aplicativo
-            self.root.ids.graph_image.source = 'graph.png'
-            self.root.ids.graph_image.reload()
-
-        except (SyntaxError, ValueError):
-            self.root.ids.error_label.text = "Isso não é uma função válida!"  # Mensagem personalizada para erro
+            expression = self.root.ids.calculator_display.text
+            result = str(eval(expression))
+            self.root.ids.calculator_display.text = result
         except Exception as e:
-            self.show_error(f"Erro: {str(e)}")
+            self.root.ids.calculator_display.text = "Erro"
 
-    def show_error(self, message):
-        if not self.dialog:
-            self.dialog = MDDialog(
-                title="Erro",
-                text=message,
-                size_hint=(0.8, 1),
-                buttons=[
-                    Button(text="Fechar", on_release=self.close_dialog)
-                ]
-            )
-        self.dialog.open()
+    def on_app_close(self, *args):
+        if os.path.exists(self.temp_image_path):
+            os.remove(self.temp_image_path)
+        return False
 
-    def close_dialog(self, obj):
-        self.dialog.dismiss()
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     MainApp().run()
