@@ -1,4 +1,6 @@
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivymd.app import MDApp
@@ -7,6 +9,10 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.list import OneLineListItem
+from kivy.uix.image import Image
+from kivy.uix.boxlayout import BoxLayout
+from kivy.animation import Animation
+from kivy.uix.anchorlayout import AnchorLayout
 
 Window.size = (450, 800)
 
@@ -17,31 +23,42 @@ MDBoxLayout:
     MDTopAppBar:
         title: "Calculadora"
         left_action_items: [["menu", lambda x: nav_drawer.set_state("toggle")]]
-        title_align: "left"
-        md_bg_color: 0, 0, 0, 1  # Fundo preto
+        md_bg_color: 0, 0, 0, 1  # Barra superior preta
         elevation: 4
-        padding: "0dp"
+        size_hint_y: None  # Impede o comportamento automático de altura
+        height: "40dp"  # Barra superior mais fina
+        title_font_size: "16sp"  # Tamanho do texto reduzido
+        title_align: "left"  # Alinhamento à esquerda
+        padding: "10dp"  # Ajustando o padding para deixar mais compacto
 
     MDNavigationDrawer:
         id: nav_drawer
         scrim_color: 0, 0, 0, 0.6
+        width: "220dp"
+        size_hint_y: None
+        height: self.minimum_height
 
         BoxLayout:
             orientation: 'vertical'
-            padding: dp(10)
-            spacing: dp(10)
+            height: dp(0)
+            spacing: dp(0)
+            size_hint_y: None
+            height: self.minimum_height
 
             MDLabel:
                 text: "Menu"
                 font_style: "H5"
                 size_hint_y: None
+                height: dp(10)
                 height: self.texture_size[1]
                 theme_text_color: "Primary"
+                padding: dp(0)
 
             OneLineListItem:
                 text: "Gráficos de Funções"
                 on_release: 
                     nav_drawer.set_state("close")
+                    app.animate_graph_up()
                     screen_manager.current = "graph_calculator"
                 theme_text_color: "Primary"
 
@@ -49,6 +66,7 @@ MDBoxLayout:
                 text: "Calculadora"
                 on_release: 
                     nav_drawer.set_state("close")
+                    app.animate_graph_up()
                     screen_manager.current = "basic_calculator"
                 theme_text_color: "Primary"
 
@@ -57,12 +75,14 @@ MDBoxLayout:
                 on_release: 
                     app.toggle_theme()  
                     nav_drawer.set_state("close")
+                    app.animate_graph_up()
                 theme_text_color: "Primary"
 
             OneLineListItem:
                 text: "Sobre"
                 on_release: 
                     nav_drawer.set_state("close")
+                    app.animate_graph_up()
                     screen_manager.current = "about"
                 theme_text_color: "Primary"
 
@@ -74,7 +94,7 @@ MDBoxLayout:
             BoxLayout:
                 orientation: 'vertical'
                 padding: dp(10), dp(20), dp(10), dp(10)
-                spacing: dp(20)
+                spacing: dp(10)
 
                 MDTextField:
                     id: function_input
@@ -82,7 +102,8 @@ MDBoxLayout:
                     mode: "rectangle"
                     multiline: False
                     size_hint_y: None
-                    height: self.parent.height * 0.1
+                    height: dp(50)  # Altura fixa para o campo de entrada
+                    padding_y: dp(10)  # Espaçamento do texto dentro da caixa de texto
 
                 MDRaisedButton:
                     text: "Gerar Gráfico"
@@ -100,7 +121,9 @@ MDBoxLayout:
 
                 Image:
                     id: graph_image
-                    size_hint_y: 0.6
+                    size_hint_y: None
+                    height: self.parent.height * 0.5
+                    size_hint_x: 1
                     opacity: 0
 
                 MDLabel:
@@ -127,7 +150,7 @@ MDBoxLayout:
                     height: dp(50)
 
                 GridLayout:
-                    cols: 4  # Com 4 colunas
+                    cols: 4
                     spacing: dp(10)
                     padding: dp(10)
                     size_hint_x: None
@@ -239,7 +262,68 @@ class MainApp(MDApp):
         return app_interface
 
     def plot_function(self):
-        pass
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        func_input = self.root.ids.function_input.text.strip()
+
+        if not func_input:
+            self.root.ids.error_label.text = "Por favor, insira uma função!"
+            self.root.ids.graph_image.opacity = 0
+            return
+
+        self.root.ids.error_label.text = ""
+
+        try:
+            x = np.linspace(-10, 10, 400)
+            y = x**2  # Exemplo de uma função quadrática f(x) = x^2
+
+            plt.plot(x, y)
+            plt.title("Gráfico da Função")
+            plt.xlabel("x")
+            plt.ylabel("f(x)")
+            plt.grid(True)
+
+            # Salvar a imagem do gráfico
+            plt.savefig(self.temp_image_path)
+            plt.close()
+
+            # Carregar a imagem no Kivy
+            self.root.ids.graph_image.source = self.temp_image_path
+            self.root.ids.graph_image.opacity = 1
+
+        except Exception as e:
+            self.root.ids.error_label.text = f"Erro: {e}"
+            self.root.ids.graph_image.opacity = 0
+
+    def update_display(self, value):
+        display = self.root.ids.calculator_display
+        current_text = display.text
+
+        if value == "C":
+            display.text = ""
+        elif value == "+/-":
+            display.text = "-" + current_text if current_text[0] != '-' else current_text[1:]
+        elif value == "()":
+            display.text += "()"
+        else:
+            display.text += value
+
+    def calculate_result(self):
+        display = self.root.ids.calculator_display
+        try:
+            result = eval(display.text)
+            display.text = str(result)
+        except Exception:
+            display.text = "Erro!"
+
+    def on_app_close(self, *args):
+        if os.path.exists(self.temp_image_path):
+            os.remove(self.temp_image_path)
+
+    def animate_graph_up(self):
+        animation = Animation(pos_hint={"top": 1}, duration=0.3)
+        animation.start(self.root.ids.graph_image)
 
     def toggle_theme(self):
         if self.theme_cls.theme_style == "Dark":
@@ -247,25 +331,4 @@ class MainApp(MDApp):
         else:
             self.theme_cls.theme_style = "Dark"
 
-    def update_display(self, value):
-        current_text = self.root.ids.calculator_display.text
-        if value == "C":
-            self.root.ids.calculator_display.text = ""
-        else:
-            self.root.ids.calculator_display.text = current_text + value
-
-    def calculate_result(self):
-        try:
-            expression = self.root.ids.calculator_display.text
-            result = str(eval(expression))
-            self.root.ids.calculator_display.text = result
-        except Exception as e:
-            self.root.ids.calculator_display.text = "Erro"
-
-    def on_app_close(self, *args):
-        if os.path.exists(self.temp_image_path):
-            os.remove(self.temp_image_path)
-        return False
-
-if __name__ == "__main__":
-    MainApp().run()
+MainApp().run()
